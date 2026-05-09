@@ -419,7 +419,7 @@ async def castigator(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🏆 *AVEM CÂȘTIGĂTORUL!* 🔴🔵\n\n"
             f"Felicitări fanului adevărat! 🎟️\n\n"
             f"🥇 {winners[0]}\n\n"
-            f"📲 Trimite-ne un DM pe Instagram pentru a primi premiul:\n"
+            f"📲 Contactează-ne pe Instagram pentru a primi premiul:\n"
             f"👉 @fcsb.shop\n\n"
             f"Alături de FCSB! 💪🔴🔵"
         )
@@ -429,7 +429,7 @@ async def castigator(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🏆 *AVEM CÂȘTIGĂTORII!* 🔴🔵\n\n"
             f"Felicitări celor {len(winners)} fani adevărați! 🎟️\n\n"
             f"{winners_text}\n\n"
-            f"📲 Trimiteți-ne un DM pe Instagram pentru a primi premiul:\n"
+            f"📲 Contactați-ne pe Instagram pentru a primi premiul:\n"
             f"👉 @fcsb.shop\n\n"
             f"Alături de FCSB! 💪🔴🔵"
         )
