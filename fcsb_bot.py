@@ -193,6 +193,30 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             del warnings_data[user_id]
         return
 
+    # Detectare cuvant "concurs" in mesaj
+    if "concurs" in text and not text.startswith("/"):
+        keyboard = [
+            [InlineKeyboardButton("📲 Canal WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")],
+            [InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]
+        ]
+        if active_contest:
+            reply_text = (
+                f"🎟️ *CONCURS ACTIV FCSB!* 🔴🔵\n\n"
+                f"{active_contest.get('descriere', '')}\n\n"
+                f"⏰ Termen: {active_contest.get('termen', '')}\n\n"
+                f"Scrie cea mai tare amintire cu FCSB! 💬\n\nAlături de FCSB! 💪🔴🔵"
+            )
+        else:
+            reply_text = (
+                "🎟️ *CONCURSURI FCSB* 🔴🔵\n\n"
+                "Momentan nu există un concurs activ.\n\n"
+                "Stai aproape — urmează ceva special! 👀🔥\n\n"
+                "Alături de FCSB! 💪🔴🔵"
+            )
+        msg = await update.message.reply_text(reply_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        asyncio.create_task(delete_after(msg, 30))
+        return
+
     today = datetime.now().strftime("%Y-%m-%d")
     key = f"{user_id}_{today}"
     daily_messages[key] = daily_messages.get(key, 0) + 1
@@ -437,13 +461,13 @@ async def setmeci(update: Update, context: ContextTypes.DEFAULT_TYPE):
     scheduled_match["data"] = context.args[0]
     scheduled_match["ora"] = context.args[1]
     scheduled_match["meci"] = " ".join(context.args[2:])
-    msg = await update.message.reply_text(
-        f"✅ Meci setat!\n"
+    await context.bot.send_message(
+        update.message.from_user.id,
+        f"✅ Meci setat cu succes!\n"
         f"📅 {scheduled_match['data']} ora {scheduled_match['ora']}\n"
         f"⚽ {scheduled_match['meci']}\n\n"
-        f"Mesajul de hype va fi trimis automat în ziua meciului! 🔴🔵"
+        f"Mesajul de hype va fi trimis cu /meci în ziua meciului! 🔴🔵"
     )
-    asyncio.create_task(delete_after(msg, 30))
     await update.message.delete()
 
 # ── ADMIN: /meci — trimite manual mesajul de zi de meci — permanent
@@ -583,8 +607,7 @@ async def adaugacuvant(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     cuvant = context.args[0].lower()
     bad_words_custom.append(cuvant)
-    msg = await update.message.reply_text(f"✅ Cuvântul '{cuvant}' adăugat!")
-    asyncio.create_task(delete_after(msg, 10))
+    await context.bot.send_message(update.message.from_user.id, f"✅ Cuvântul '{cuvant}' adăugat!")
     await update.message.delete()
 
 async def stergecuvant(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -597,10 +620,9 @@ async def stergecuvant(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cuvant = context.args[0].lower()
     if cuvant in bad_words_custom:
         bad_words_custom.remove(cuvant)
-        msg = await update.message.reply_text(f"✅ Cuvântul '{cuvant}' șters!")
+        await context.bot.send_message(update.message.from_user.id, f"✅ Cuvântul '{cuvant}' șters!")
     else:
-        msg = await update.message.reply_text(f"❌ Cuvântul '{cuvant}' nu a fost găsit.")
-    asyncio.create_task(delete_after(msg, 10))
+        await context.bot.send_message(update.message.from_user.id, f"❌ Cuvântul '{cuvant}' nu a fost găsit.")
     await update.message.delete()
 
 async def listacuvinte(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -609,8 +631,7 @@ async def listacuvinte(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.delete()
         return
     text = f"📋 Cuvinte personalizate:\n{', '.join(bad_words_custom)}" if bad_words_custom else "📋 Lista personalizată e goală."
-    msg = await update.message.reply_text(text)
-    asyncio.create_task(delete_after(msg, 15))
+    await context.bot.send_message(update.message.from_user.id, text)
     await update.message.delete()
 
 # ── Callback butoane ───────────────────────────────────────────────
