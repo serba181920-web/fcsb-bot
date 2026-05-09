@@ -362,7 +362,10 @@ async def check_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if len(quiz_winners) >= max_winners:
             winners_text = "\n".join([f"{medals[i]} {w['name']}" for i, w in enumerate(quiz_winners[:3])])
-            keyboard = [[InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]]
+            keyboard = [
+                [InlineKeyboardButton("📸 Contactează-ne pe Instagram", url="https://www.instagram.com/fcsb.shop/")],
+                [InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]
+            ]
 
             if len(quiz_winners) == 1:
                 final_text = (
@@ -578,7 +581,10 @@ async def castigator(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Alături de FCSB! 💪🔴🔵"
         )
     active_contest.clear()
-    keyboard = [[InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]]
+    keyboard = [
+        [InlineKeyboardButton("📸 Contactează-ne pe Instagram", url="https://www.instagram.com/fcsb.shop/")],
+        [InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]
+    ]
     await context.bot.send_message(
         update.message.chat_id, text,
         parse_mode="Markdown",
