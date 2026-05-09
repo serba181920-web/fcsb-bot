@@ -14,9 +14,7 @@ TOKEN = os.environ.get("TOKEN", "")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-points = {}
 warnings_data = {}
-daily_messages = {}
 active_contest = {}
 scheduled_match = {}
 bad_words_custom = []
@@ -43,18 +41,25 @@ RIVAL_POSITIVE = [
 
 FCSB_LINKS = [
     "shop.fcsb.ro", "fcsb.ro", "t.me/comunitateaFCSB",
-    "whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46"
+    "whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46",
+    "instagram.com/fcsb.shop", "tiktok.com/@fcsb.shop",
+    "facebook.com/p/FCSB-Shop"
 ]
 
-LEVELS = [
-    (0, "⚪ Fan Nou"),
-    (100, "🔵 Fan Albastru"),
-    (500, "🔴 Fan Roșu"),
-    (1000, "🔴🔵 Fan FCSB"),
-    (2500, "🏆 Legendă Roșalbastră")
+SOCIAL_BUTTONS = [
+    [
+        InlineKeyboardButton("📸 Instagram", url="https://www.instagram.com/fcsb.shop/"),
+        InlineKeyboardButton("🎵 TikTok", url="https://www.tiktok.com/@fcsb.shop"),
+    ],
+    [
+        InlineKeyboardButton("👥 Facebook", url="https://www.facebook.com/p/FCSB-Shop-Oficial-61557942045101/"),
+        InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro"),
+    ],
+    [
+        InlineKeyboardButton("📲 Canal WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")
+    ]
 ]
 
-# ── Helper: sterge mesaj dupa N secunde ───────────────────────────
 async def delete_after(message, seconds=30):
     await asyncio.sleep(seconds)
     try:
@@ -62,39 +67,7 @@ async def delete_after(message, seconds=30):
     except:
         pass
 
-# ── Helper: trimite mesaj efemer ──────────────────────────────────
-async def send_ephemeral(context, chat_id, text, seconds=30, reply_markup=None, parse_mode="Markdown"):
-    msg = await context.bot.send_message(
-        chat_id, text,
-        parse_mode=parse_mode,
-        reply_markup=reply_markup
-    )
-    asyncio.create_task(delete_after(msg, seconds))
-    return msg
-
-def get_level(pts):
-    level_name = LEVELS[0][1]
-    for threshold, name in LEVELS:
-        if pts >= threshold:
-            level_name = name
-    return level_name
-
-async def add_points(user_id, username, amount, context, chat_id):
-    old_pts = points.get(user_id, 0)
-    old_level = get_level(old_pts)
-    points[user_id] = old_pts + amount
-    new_level = get_level(points[user_id])
-    if old_level != new_level:
-        msg = await context.bot.send_message(
-            chat_id,
-            f"🎉 Felicitări @{username}!\n"
-            f"Ai urcat la *{new_level}*! 🔴🔵\n\n"
-            f"Continuă să fii activ și câștigă premii exclusive! 💪",
-            parse_mode="Markdown"
-        )
-        asyncio.create_task(delete_after(msg, 30))
-
-# ── Bun venit — dispare dupa 30 secunde ───────────────────────────
+# ── Bun venit ──────────────────────────────────────────────────────
 async def new_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for member in update.message.new_chat_members:
         if member.is_bot:
@@ -103,7 +76,7 @@ async def new_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [
                 InlineKeyboardButton("📋 Regulile grupului", callback_data="reguli"),
-                InlineKeyboardButton("🏆 Clasament", callback_data="top")
+                InlineKeyboardButton("🎟️ Concurs activ", callback_data="concurs")
             ],
             [
                 InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro"),
@@ -111,14 +84,13 @@ async def new_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ]
         msg = await update.message.reply_text(
-            f"👋 Bun venit în Comunitatea FCSB, *{name}*! 🔴🔵\n\n"
+            f"👋 Bun venit în *Comunitatea FCSB*, {name}! 🔴🔵\n\n"
             f"Ești acum parte din cea mai tare comunitate de fani FCSB din România! 🏆\n\n"
             f"Aici găsești:\n"
             f"🎟️ Concursuri cu bilete la meciuri\n"
             f"🏆 Premii și produse oficiale FCSB\n"
             f"🔥 Discuții live la meciuri\n"
             f"👕 Noutăți despre colecții și shop\n\n"
-            f"Fii activ, urcă în clasament și câștigă premii exclusive!\n\n"
             f"Alături de FCSB! 💪🔴🔵",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
@@ -129,14 +101,13 @@ async def new_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-# ── Moderare mesaje ────────────────────────────────────────────────
+# ── Moderare ───────────────────────────────────────────────────────
 async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
     text = update.message.text.lower()
     user = update.message.from_user
     user_id = user.id
-    username = user.username or user.first_name
     chat_id = update.message.chat_id
 
     all_bad = BAD_WORDS + bad_words_custom
@@ -193,7 +164,6 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             del warnings_data[user_id]
         return
 
-    # Detectare cuvant "concurs" in mesaj
     if "concurs" in text and not text.startswith("/"):
         keyboard = [
             [InlineKeyboardButton("📲 Canal WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")],
@@ -215,33 +185,26 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         msg = await update.message.reply_text(reply_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
         asyncio.create_task(delete_after(msg, 30))
-        return
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    key = f"{user_id}_{today}"
-    daily_messages[key] = daily_messages.get(key, 0) + 1
-    if daily_messages[key] <= 10:
-        await add_points(user_id, username, 1, context, chat_id)
-
-# ── /start — efemer ────────────────────────────────────────────────
+# ── /start ─────────────────────────────────────────────────────────
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [
             InlineKeyboardButton("📋 Regulile grupului", callback_data="reguli"),
-            InlineKeyboardButton("🏆 Clasament", callback_data="top")
+            InlineKeyboardButton("🎟️ Concurs activ", callback_data="concurs")
         ],
         [
             InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro"),
-            InlineKeyboardButton("🎟️ Concurs activ", callback_data="concurs")
+            InlineKeyboardButton("📲 Canal WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")
         ]
     ]
     msg = await update.message.reply_text(
         "🔴🔵 *Comunitatea FCSB — Bot Oficial*\n\n"
         "Comenzi disponibile:\n"
         "/reguli — Regulile grupului\n"
-        "/top — Clasamentul fanilor\n"
         "/shop — Shop oficial FCSB\n"
         "/concurs — Concursul activ\n"
+        "/social — Urmărește-ne pe social media\n"
         "/ajutor — Toate comenzile\n\n"
         "Alături de FCSB! 💪🔴🔵",
         parse_mode="Markdown",
@@ -250,15 +213,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(delete_after(update.message, 5))
     asyncio.create_task(delete_after(msg, 30))
 
-# ── /ajutor — efemer ───────────────────────────────────────────────
+# ── /ajutor ────────────────────────────────────────────────────────
 async def ajutor(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text(
         "📋 *Comenzile disponibile* 🔴🔵\n\n"
         "/start — Mesaj de bun venit\n"
         "/reguli — Regulile comunității\n"
-        "/top — Clasamentul fanilor activi\n"
         "/shop — Shop oficial FCSB\n"
         "/concurs — Concursul activ\n"
+        "/social — Urmărește-ne pe social media\n"
         "/ajutor — Lista comenzilor\n\n"
         "Alături de FCSB! 💪🔴🔵",
         parse_mode="Markdown"
@@ -266,7 +229,7 @@ async def ajutor(update: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(delete_after(update.message, 5))
     asyncio.create_task(delete_after(msg, 30))
 
-# ── /reguli — efemer ───────────────────────────────────────────────
+# ── /reguli ────────────────────────────────────────────────────────
 async def reguli(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("✅ Am înțeles!", callback_data="ok_reguli")]]
     msg = await update.message.reply_text(
@@ -287,37 +250,15 @@ async def reguli(update: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(delete_after(update.message, 5))
     asyncio.create_task(delete_after(msg, 30))
 
-# ── /top — efemer ──────────────────────────────────────────────────
-async def top(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]]
-    if not points:
-        top_text = (
-            "🏆 *CLASAMENTUL FANILOR FCSB* 🔴🔵\n\n"
-            "Nimeni nu are puncte încă — fii primul! 🔥\n\n"
-            "⚪ Nivel 1 — Fan Nou (0 pct)\n"
-            "🔵 Nivel 2 — Fan Albastru (100 pct)\n"
-            "🔴 Nivel 3 — Fan Roșu (500 pct)\n"
-            "🔴🔵 Nivel 4 — Fan FCSB (1000 pct)\n"
-            "🏆 Nivel 5 — Legendă Roșalbastră (2500 pct)\n\n"
-            "Membrii de Nivel 5 au prioritate la bilete! 🎟️\n\n"
-            "Alături de FCSB! 💪🔴🔵"
-        )
-    else:
-        sorted_pts = sorted(points.items(), key=lambda x: x[1], reverse=True)[:10]
-        medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
-        top_text = "🏆 *CLASAMENTUL FANILOR FCSB* 🔴🔵\n\n"
-        for i, (uid, pts) in enumerate(sorted_pts):
-            level = get_level(pts)
-            top_text += f"{medals[i]} {level} — *{pts} pct*\n"
-        top_text += "\nMembrii de Nivel 5 au prioritate la bilete! 🎟️\n\nAlături de FCSB! 💪🔴🔵"
-
-    msg = await update.message.reply_text(top_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
-    asyncio.create_task(delete_after(update.message, 5))
-    asyncio.create_task(delete_after(msg, 30))
-
-# ── /shop — efemer ─────────────────────────────────────────────────
+# ── /shop ──────────────────────────────────────────────────────────
 async def shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("🛒 Deschide Shop FCSB", url="https://shop.fcsb.ro")]]
+    keyboard = [
+        [InlineKeyboardButton("🛒 Deschide Shop FCSB", url="https://shop.fcsb.ro")],
+        [
+            InlineKeyboardButton("📸 Instagram", url="https://www.instagram.com/fcsb.shop/"),
+            InlineKeyboardButton("🎵 TikTok", url="https://www.tiktok.com/@fcsb.shop")
+        ]
+    ]
     msg = await update.message.reply_text(
         "🛒 *SHOP OFICIAL FCSB* 🔴🔵\n\n"
         "Găsești aici tot ce ai nevoie ca fan adevărat!\n\n"
@@ -333,7 +274,24 @@ async def shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(delete_after(update.message, 5))
     asyncio.create_task(delete_after(msg, 30))
 
-# ── /concurs — efemer ──────────────────────────────────────────────
+# ── /social ────────────────────────────────────────────────────────
+async def social(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = await update.message.reply_text(
+        "📱 *URMĂREȘTE FCSB SHOP* 🔴🔵\n\n"
+        "Fii primul care află noutăți, oferte și surprize!\n\n"
+        "📸 Instagram: @fcsb.shop\n"
+        "🎵 TikTok: @fcsb.shop\n"
+        "👥 Facebook: FCSB Shop Oficial\n"
+        "🛒 Shop: shop.fcsb.ro\n"
+        "📲 WhatsApp: Comunitatea FCSB\n\n"
+        "Alături de FCSB! 💪🔴🔵",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(SOCIAL_BUTTONS)
+    )
+    asyncio.create_task(delete_after(update.message, 5))
+    asyncio.create_task(delete_after(msg, 30))
+
+# ── /concurs ───────────────────────────────────────────────────────
 async def concurs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("📲 Canal WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")],
@@ -361,14 +319,49 @@ async def concurs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(delete_after(update.message, 5))
     asyncio.create_task(delete_after(msg, 30))
 
-# ── ADMIN: /anunt — permanent ──────────────────────────────────────
+# ── ADMIN: /welcome ────────────────────────────────────────────────
+async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.delete()
+        return
+    keyboard = [
+        [
+            InlineKeyboardButton("📋 Regulile grupului", callback_data="reguli"),
+            InlineKeyboardButton("🎟️ Concurs activ", callback_data="concurs")
+        ],
+        [
+            InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro"),
+            InlineKeyboardButton("📲 Canal WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")
+        ],
+        [
+            InlineKeyboardButton("📸 Instagram", url="https://www.instagram.com/fcsb.shop/"),
+            InlineKeyboardButton("🎵 TikTok", url="https://www.tiktok.com/@fcsb.shop"),
+            InlineKeyboardButton("👥 Facebook", url="https://www.facebook.com/p/FCSB-Shop-Oficial-61557942045101/")
+        ]
+    ]
+    await context.bot.send_message(
+        update.message.chat_id,
+        "👋 Bun venit în *Comunitatea FCSB!* 🔴🔵\n\n"
+        "Ești acum parte din cea mai tare comunitate de fani FCSB din România! 🏆\n\n"
+        "📌 *Înainte să scrii, citește regulile!*\n\n"
+        "Aici câștigi:\n"
+        "🎟️ Bilete la meciuri prin concursuri exclusive\n"
+        "🏆 Premii și produse oficiale FCSB\n\n"
+        "Urmărește-ne pe toate platformele 👇\n\n"
+        "Alături de FCSB! 💪🔴🔵",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    await update.message.delete()
+
+# ── ADMIN: /anunt ──────────────────────────────────────────────────
 async def anunt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
     if member.status not in ["administrator", "creator"]:
         await update.message.delete()
         return
     if not context.args:
-        await update.message.reply_text("Folosește: /anunt [mesajul tău]")
         return
     text = " ".join(context.args)
     await context.bot.send_message(
@@ -378,14 +371,13 @@ async def anunt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.delete()
 
-# ── ADMIN: /concursnou — permanent ────────────────────────────────
+# ── ADMIN: /concursnou ─────────────────────────────────────────────
 async def concursnou(update: Update, context: ContextTypes.DEFAULT_TYPE):
     member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
     if member.status not in ["administrator", "creator"]:
         await update.message.delete()
         return
     if not context.args:
-        await update.message.reply_text("Folosește: /concursnou [descriere] | [termen]")
         return
     text = " ".join(context.args)
     parts = text.split("|")
@@ -393,7 +385,10 @@ async def concursnou(update: Update, context: ContextTypes.DEFAULT_TYPE):
     termen = parts[1].strip() if len(parts) > 1 else "În curând"
     active_contest["descriere"] = descriere
     active_contest["termen"] = termen
-    keyboard = [[InlineKeyboardButton("📲 Canal WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")]]
+    keyboard = [
+        [InlineKeyboardButton("📲 Canal WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")],
+        [InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]
+    ]
     await context.bot.send_message(
         update.message.chat_id,
         f"🎟️ *CONCURS FCSB!* 🔴🔵\n\n"
@@ -408,16 +403,16 @@ async def concursnou(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.delete()
 
-# ── ADMIN: /castigator — permanent ────────────────────────────────
+# ── ADMIN: /castigator ─────────────────────────────────────────────
 async def castigator(update: Update, context: ContextTypes.DEFAULT_TYPE):
     member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
     if member.status not in ["administrator", "creator"]:
         await update.message.delete()
         return
     if not context.args:
-        await update.message.reply_text("Folosește: /castigator @user1 @user2 @user3")
         return
-    winners = context.args[:3]
+    text = " ".join(context.args)
+    winners = [w.strip() for w in text.split("|")][:3]
     medals = ["🥇", "🥈", "🥉"]
     if len(winners) == 1:
         text = (
@@ -426,7 +421,6 @@ async def castigator(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🥇 {winners[0]}\n\n"
             f"📲 Trimite-ne un DM pe Instagram pentru a primi premiul:\n"
             f"👉 @fcsb.shop\n\n"
-            f"+50 puncte bonus adăugate! ⭐\n\n"
             f"Alături de FCSB! 💪🔴🔵"
         )
     else:
@@ -437,7 +431,6 @@ async def castigator(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{winners_text}\n\n"
             f"📲 Trimiteți-ne un DM pe Instagram pentru a primi premiul:\n"
             f"👉 @fcsb.shop\n\n"
-            f"+50 puncte bonus adăugate fiecăruia! ⭐\n\n"
             f"Alături de FCSB! 💪🔴🔵"
         )
     active_contest.clear()
@@ -456,7 +449,6 @@ async def setmeci(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.delete()
         return
     if len(context.args) < 3:
-        await update.message.reply_text("Folosește: /setmeci 12.05.2026 21:00 FCSB vs Rapid Arena Nationala")
         return
     scheduled_match["data"] = context.args[0]
     scheduled_match["ora"] = context.args[1]
@@ -470,7 +462,7 @@ async def setmeci(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.delete()
 
-# ── ADMIN: /meci — trimite manual mesajul de zi de meci — permanent
+# ── ADMIN: /meci ───────────────────────────────────────────────────
 async def meci(update: Update, context: ContextTypes.DEFAULT_TYPE):
     member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
     if member.status not in ["administrator", "creator"]:
@@ -494,18 +486,16 @@ async def meci(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.delete()
 
-# ── ADMIN: /rezultat — permanent ──────────────────────────────────
+# ── ADMIN: /rezultat ───────────────────────────────────────────────
 async def rezultat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
     if member.status not in ["administrator", "creator"]:
         await update.message.delete()
         return
     if not context.args:
-        await update.message.reply_text("Folosește: /rezultat 2-0")
         return
     scor = context.args[0]
     adversar = scheduled_match.get("adversar", "adversarul")
-    meci_info = f"FCSB vs {adversar}"
     try:
         parts = scor.split("-")
         golfcsb = int(parts[0])
@@ -537,23 +527,22 @@ async def rezultat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]]
     await context.bot.send_message(
         update.message.chat_id,
-        f"{emoji} *FINAL! {meci_info} {scor}*\n\n{mesaj}\n\n"
+        f"{emoji} *FINAL! FCSB vs {adversar} {scor}*\n\n{mesaj}\n\n"
         f"🛒 Arată că ești fan adevărat:\nshop.fcsb.ro\n\nAlături de FCSB! 🔴🔵",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
     await update.message.delete()
 
-# ── ADMIN: /fanweek — permanent ────────────────────────────────────
+# ── ADMIN: /fanweek ────────────────────────────────────────────────
 async def fanweek(update: Update, context: ContextTypes.DEFAULT_TYPE):
     member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
     if member.status not in ["administrator", "creator"]:
         await update.message.delete()
         return
     if not context.args:
-        await update.message.reply_text("Folosește: /fanweek @username")
         return
-    username = context.args[0]
+    username = " ".join(context.args)
     keyboard = [[InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]]
     await context.bot.send_message(
         update.message.chat_id,
@@ -562,7 +551,6 @@ async def fanweek(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👑 *{username}*\n\n"
         f"Ești un exemplu pentru toți fanii roș-albaștri! 🔥\n"
         f"Activitatea ta nu a trecut neobservată!\n\n"
-        f"🎁 +100 puncte bonus adăugate în clasament! ⭐\n\n"
         f"Vrei să fii următorul fan al săptămânii?\n"
         f"Fii activ și arată că ești fan adevărat! 💪\n\n"
         f"Alături de FCSB! 🔴🔵",
@@ -571,14 +559,13 @@ async def fanweek(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.delete()
 
-# ── ADMIN: /oferta — permanent ─────────────────────────────────────
+# ── ADMIN: /oferta ─────────────────────────────────────────────────
 async def oferta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
     if member.status not in ["administrator", "creator"]:
         await update.message.delete()
         return
     if not context.args:
-        await update.message.reply_text("Folosește: /oferta Tricou Vintage | shop.fcsb.ro/link | 12.05.2026 23:59")
         return
     text = " ".join(context.args)
     parts = text.split("|")
@@ -669,21 +656,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         asyncio.create_task(delete_after(msg, 15))
 
-    elif query.data == "top":
-        if not points:
-            msg = await query.message.reply_text(
-                "🏆 Nimeni nu are puncte încă — fii primul! 🔥\n\nAlături de FCSB! 🔴🔵"
-            )
-        else:
-            sorted_pts = sorted(points.items(), key=lambda x: x[1], reverse=True)[:5]
-            medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
-            top_text = "🏆 *TOP 5 FANI FCSB* 🔴🔵\n\n"
-            for i, (uid, pts) in enumerate(sorted_pts):
-                top_text += f"{medals[i]} {get_level(pts)} — *{pts} pct*\n"
-            msg = await query.message.reply_text(top_text, parse_mode="Markdown")
-        asyncio.create_task(delete_after(msg, 30))
-
     elif query.data == "concurs":
+        keyboard = [
+            [InlineKeyboardButton("📲 Canal WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")],
+            [InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]
+        ]
         if active_contest:
             text = (
                 f"🎟️ *CONCURS ACTIV!* 🔴🔵\n\n"
@@ -693,40 +670,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         else:
             text = "🎟️ Momentan nu există un concurs activ.\n\nUrmează ceva special! Stai aproape! 👀🔴🔵"
-        msg = await query.message.reply_text(text, parse_mode="Markdown")
+        msg = await query.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
         asyncio.create_task(delete_after(msg, 30))
-
-# ── ADMIN: /welcome — mesaj fix cu butoane pentru pin ─────────────
-async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
-    if member.status not in ["administrator", "creator"]:
-        await update.message.delete()
-        return
-    keyboard = [
-        [
-            InlineKeyboardButton("📋 Regulile grupului", callback_data="reguli"),
-            InlineKeyboardButton("🏆 Clasament", callback_data="top")
-        ],
-        [
-            InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro"),
-            InlineKeyboardButton("📲 Canal WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")
-        ]
-    ]
-    await context.bot.send_message(
-        update.message.chat_id,
-        "👋 Bun venit în *Comunitatea FCSB!* 🔴🔵\n\n"
-        "Ești acum parte din cea mai tare comunitate de fani FCSB din România! 🏆\n\n"
-        "📌 *Înainte să scrii, citește regulile!*\n\n"
-        "Aici câștigi:\n"
-        "🎟️ Bilete la meciuri prin concursuri exclusive\n"
-        "🏆 Premii și produse oficiale FCSB\n"
-        "⭐ Urcă în clasament fiind activ\n\n"
-        "Folosește butoanele de mai jos pentru tot ce ai nevoie! 👇\n\n"
-        "Alături de FCSB! 💪🔴🔵",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-    await update.message.delete()
 
 # ── Main ───────────────────────────────────────────────────────────
 def main():
@@ -736,9 +681,10 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ajutor", ajutor))
     app.add_handler(CommandHandler("reguli", reguli))
-    app.add_handler(CommandHandler("top", top))
     app.add_handler(CommandHandler("shop", shop))
+    app.add_handler(CommandHandler("social", social))
     app.add_handler(CommandHandler("concurs", concurs))
+    app.add_handler(CommandHandler("welcome", welcome))
     app.add_handler(CommandHandler("anunt", anunt))
     app.add_handler(CommandHandler("concursnou", concursnou))
     app.add_handler(CommandHandler("castigator", castigator))
@@ -750,7 +696,6 @@ def main():
     app.add_handler(CommandHandler("adaugacuvant", adaugacuvant))
     app.add_handler(CommandHandler("stergecuvant", stergecuvant))
     app.add_handler(CommandHandler("listacuvinte", listacuvinte))
-    app.add_handler(CommandHandler("welcome", welcome))
     app.add_handler(CallbackQueryHandler(button_callback))
     logger.info("FCSB Admin Bot pornit!")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
