@@ -2,9 +2,6 @@ import logging
 import os
 import re
 import asyncio
-import schedule
-import threading
-import time
 from datetime import datetime, date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -411,16 +408,8 @@ async def send_daily_reminder():
     except Exception as e:
         logger.error(f"Eroare reminder: {e}")
 
-def run_scheduler():
-    schedule.every().day.at("13:00").do(
-        lambda: asyncio.run_coroutine_threadsafe(
-            send_daily_reminder(),
-            bot_app.bot._loop if hasattr(bot_app.bot, '_loop') else asyncio.get_event_loop()
-        )
-    )
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+async def scheduled_reminder(context):
+    await send_daily_reminder()
 
 # ── ADMIN: /setreminder ────────────────────────────────────────────
 async def setreminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -987,8 +976,11 @@ def main():
     app.add_handler(CommandHandler("setreminder", setreminder))
     app.add_handler(CommandHandler("testreminder", testreminder))
     app.add_handler(CallbackQueryHandler(button_callback))
-    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-    scheduler_thread.start()
+    import pytz
+    from datetime import time as dt_time
+    tz = pytz.timezone("Europe/Bucharest")
+    job_queue = app.job_queue
+    job_queue.run_daily(scheduled_reminder, time=dt_time(13, 0, tzinfo=tz))
     logger.info("FCSB Admin Bot pornit!")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
