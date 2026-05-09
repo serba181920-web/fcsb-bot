@@ -460,13 +460,13 @@ async def setmeci(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     scheduled_match["data"] = context.args[0]
     scheduled_match["ora"] = context.args[1]
-    scheduled_match["meci"] = " ".join(context.args[2:])
+    scheduled_match["adversar"] = " ".join(context.args[2:])
     await context.bot.send_message(
         update.message.from_user.id,
         f"✅ Meci setat cu succes!\n"
         f"📅 {scheduled_match['data']} ora {scheduled_match['ora']}\n"
-        f"⚽ {scheduled_match['meci']}\n\n"
-        f"Mesajul de hype va fi trimis cu /meci în ziua meciului! 🔴🔵"
+        f"⚽ FCSB vs {scheduled_match['adversar']}\n\n"
+        f"Trimite /meci în ziua meciului! 🔴🔵"
     )
     await update.message.delete()
 
@@ -477,16 +477,18 @@ async def meci(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.delete()
         return
     ora = scheduled_match.get("ora", "21:00")
-    meci_info = scheduled_match.get("meci", "FCSB")
-    keyboard = [[InlineKeyboardButton("🛒 Echipează-te roș-albastru!", url="https://shop.fcsb.ro")]]
+    adversar = scheduled_match.get("adversar", "adversarul")
+    keyboard = [[InlineKeyboardButton("🛒 Îmbracă-te roș-albastru!", url="https://shop.fcsb.ro")]]
     await context.bot.send_message(
         update.message.chat_id,
         f"🔴🔵 *AZI E ZIUA NOASTRĂ!* 🔴🔵\n\n"
-        f"*{meci_info}* nu știe ce îl așteaptă! 😤\n\n"
+        f"⚽ *FCSB vs {adversar}*\n"
         f"⏰ Ora {ora}\n\n"
         f"Pe stadion sau acasă — noi suntem *AL 12-LEA JUCĂTOR!* 💪\n\n"
-        f"Fă-i simțiți că suntem acolo cu ei!\n\n"
-        f"Alături de FCSB! 🔴🔵🔥",
+        f"Vocea noastră ajunge pe teren! 🔥\n\n"
+        f"👕 Îmbracă-te roș-albastru:\n"
+        f"🛒 shop.fcsb.ro\n\n"
+        f"Alături de FCSB! 🔴🔵",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -502,7 +504,8 @@ async def rezultat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Folosește: /rezultat 2-0")
         return
     scor = context.args[0]
-    meci_info = scheduled_match.get("meci", "FCSB")
+    adversar = scheduled_match.get("adversar", "adversarul")
+    meci_info = f"FCSB vs {adversar}"
     try:
         parts = scor.split("-")
         golfcsb = int(parts[0])
