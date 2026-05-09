@@ -2,7 +2,10 @@ import logging
 import os
 import re
 import asyncio
-from datetime import datetime
+import schedule
+import threading
+import time
+from datetime import datetime, date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
@@ -322,6 +325,137 @@ async def concurs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(delete_after(update.message, 5))
     asyncio.create_task(delete_after(msg, 30))
 
+
+
+# ── Butoane sociale pentru remindere ──────────────────────────────
+SOCIAL_REMINDER_BUTTONS = [
+    [
+        InlineKeyboardButton("🛒 Shop", url="https://shop.fcsb.ro"),
+        InlineKeyboardButton("📸 Instagram", url="https://www.instagram.com/fcsb.shop/"),
+        InlineKeyboardButton("🎵 TikTok", url="https://www.tiktok.com/@fcsb.shop")
+    ],
+    [
+        InlineKeyboardButton("👥 Facebook", url="https://www.facebook.com/p/FCSB-Shop-Oficial-61557942045101/"),
+        InlineKeyboardButton("📲 WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")
+    ]
+]
+
+# ── Mesaje zilnice ─────────────────────────────────────────────────
+DAILY_MESSAGES = {
+    0: ( 
+        "🔴🔵 Luni e ziua în care campionii încep să lucreze!\n\n"
+        "Cu ce gând începi săptămâna ca fan FCSB? Scrie mai jos! 👇\n\n"
+        "Urmărește-ne pe toate platformele pentru cele mai tari momente roș-albastre 📲\n"
+        "👉 shop.fcsb.ro — pentru că un fan adevărat se îmbracă pe măsură 😉"
+    ),
+    1: (
+        "🧠 Marțea e ziua celor care știu fotbal!\n\n"
+        "Câte titluri de campioană are FCSB? Scrie numărul în comentarii — să vedem cine știe! 👇\n\n"
+        "Urmărește-ne pe toate platformele să nu ratezi niciun moment 🔴🔵\n"
+        "👉 shop.fcsb.ro — colecția completă te așteaptă"
+    ),
+    2: (
+        "⭐ Miercurea e a fanilor adevărați!\n\n"
+        "Care e jucătorul tău preferat din lotul actual FCSB și de ce? Spune-ne mai jos! 👇\n\n"
+        "Nu uita să ne urmărești pe social media pentru știri exclusive 📲\n"
+        "👉 shop.fcsb.ro — poate găsești esarfa jucătorului tău preferat 😏"
+    ),
+    3: (
+        "💭 Joi e ziua amintirilor roș-albastre!\n\n"
+        "Care e cel mai tare meci FCSB pe care l-ai văzut vreodată? Povestește-ne! 👇\n\n"
+        "Urmărește-ne pe Instagram și TikTok să trăim împreună fiecare moment 🔴🔵\n"
+        "👉 shop.fcsb.ro — pentru că amintirile bune merită ținute aproape"
+    ),
+    4: (
+        "🔥 Vinerea e pentru cei care trăiesc roș-albastru!\n\n"
+        "Ce aștepți cel mai mult de la FCSB în acest sezon? 👇\n\n"
+        "Urmărește-ne pe toate platformele să fii primul care află noutățile 📲\n"
+        "👉 shop.fcsb.ro — îmbracă-te roș-albastru înainte de meci"
+    ),
+    5: (
+        "🔴🔵 Weekend-ul e roș-albastru!\n\n"
+        "Care e primul lucru pe care îl faci în weekend ca fan FCSB? Spune-ne mai jos! 👇\n\n"
+        "Urmărește-ne pe toate platformele pentru cele mai tari momente 📲\n"
+        "👉 shop.fcsb.ro — pentru că stilul roș-albastru nu are zi liberă 😎"
+    ),
+    6: (
+        "☀️ Duminica e ziua în care ne uităm înapoi cu mândrie!\n\n"
+        "Care a fost cel mai tare moment FCSB din săptămâna asta? Scrie mai jos! 👇\n\n"
+        "Urmărește-ne pe Instagram și TikTok să nu ratezi nimic 📲\n"
+        "👉 shop.fcsb.ro — noile colecții te așteaptă"
+    )
+}
+
+# ── Chat ID pentru reminder ────────────────────────────────────────
+reminder_chat_id = None
+bot_app = None
+
+async def send_daily_reminder():
+    if not reminder_chat_id or not bot_app:
+        return
+    today = date.today()
+    start_date = date(2026, 5, 11)
+    if today < start_date:
+        return
+    weekday = today.weekday()
+    text = DAILY_MESSAGES.get(weekday)
+    if not text:
+        return
+    try:
+        await bot_app.bot.send_message(
+            reminder_chat_id,
+            text,
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(SOCIAL_REMINDER_BUTTONS)
+        )
+    except Exception as e:
+        logger.error(f"Eroare reminder: {e}")
+
+def run_scheduler():
+    schedule.every().day.at("13:00").do(
+        lambda: asyncio.run_coroutine_threadsafe(
+            send_daily_reminder(),
+            bot_app.bot._loop if hasattr(bot_app.bot, '_loop') else asyncio.get_event_loop()
+        )
+    )
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
+# ── ADMIN: /setreminder ────────────────────────────────────────────
+async def setreminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global reminder_chat_id
+    member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.delete()
+        return
+    reminder_chat_id = update.message.chat_id
+    await context.bot.send_message(
+        update.message.from_user.id,
+        f"✅ Remindere zilnice activate pentru acest grup!\n"
+        f"⏰ Ora 13:00 în fiecare zi\n"
+        f"📅 Începând din 11 mai 2026\n\n"
+        f"Mesaje diferite pentru fiecare zi a săptămânii! 🔴🔵"
+    )
+    await update.message.delete()
+
+# ── ADMIN: /testreminder ───────────────────────────────────────────
+async def testreminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global reminder_chat_id
+    member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.delete()
+        return
+    reminder_chat_id = update.message.chat_id
+    weekday = date.today().weekday()
+    text = DAILY_MESSAGES.get(weekday)
+    await context.bot.send_message(
+        update.message.chat_id,
+        text,
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(SOCIAL_REMINDER_BUTTONS)
+    )
+    await update.message.delete()
 
 # ── Quiz activ ─────────────────────────────────────────────────────
 active_quiz = {}
@@ -825,7 +959,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ── Main ───────────────────────────────────────────────────────────
 def main():
+    global bot_app
     app = Application.builder().token(TOKEN).build()
+    bot_app = app
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, new_member))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_message))
     app.add_handler(CommandHandler("start", start))
@@ -848,7 +984,11 @@ def main():
     app.add_handler(CommandHandler("adaugacuvant", adaugacuvant))
     app.add_handler(CommandHandler("stergecuvant", stergecuvant))
     app.add_handler(CommandHandler("listacuvinte", listacuvinte))
+    app.add_handler(CommandHandler("setreminder", setreminder))
+    app.add_handler(CommandHandler("testreminder", testreminder))
     app.add_handler(CallbackQueryHandler(button_callback))
+    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+    scheduler_thread.start()
     logger.info("FCSB Admin Bot pornit!")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
