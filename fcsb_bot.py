@@ -164,6 +164,9 @@ async def check_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             del warnings_data[user_id]
         return
 
+    if active_quiz:
+        await check_quiz_answer(update, context)
+
     if "concurs" in text and not text.startswith("/"):
         keyboard = [
             [InlineKeyboardButton("📲 Canal WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")],
@@ -318,6 +321,147 @@ async def concurs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
     asyncio.create_task(delete_after(update.message, 5))
     asyncio.create_task(delete_after(msg, 30))
+
+
+# ── Quiz activ ─────────────────────────────────────────────────────
+active_quiz = {}
+quiz_winners = []
+
+async def check_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not active_quiz:
+        return
+    if not update.message or not update.message.text:
+        return
+    text = update.message.text.strip().lower()
+    user = update.message.from_user
+    user_id = user.id
+    name = user.first_name
+    if user.last_name:
+        name += f" {user.last_name}"
+
+    correct = active_quiz.get("raspuns", "").lower()
+    max_winners = active_quiz.get("castigatori", 1)
+    chat_id = update.message.chat_id
+
+    if user_id in [w["id"] for w in quiz_winners]:
+        return
+
+    if text == correct:
+        quiz_winners.append({"id": user_id, "name": name})
+        position = len(quiz_winners)
+        medals = ["🥇", "🥈", "🥉"]
+        medal = medals[position - 1] if position <= 3 else f"{position}."
+
+        msg = await context.bot.send_message(
+            chat_id,
+            f"{medal} *{name}* a răspuns corect! ✅\n\n"
+            f"Alături de FCSB! 🔴🔵",
+            parse_mode="Markdown"
+        )
+        asyncio.create_task(delete_after(msg, 30))
+
+        if len(quiz_winners) >= max_winners:
+            winners_text = "\n".join([f"{medals[i]} {w['name']}" for i, w in enumerate(quiz_winners[:3])])
+            keyboard = [[InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]]
+
+            if len(quiz_winners) == 1:
+                final_text = (
+                    f"🏆 *AVEM CÂȘTIGĂTORUL QUIZ-ULUI!* 🔴🔵\n\n"
+                    f"🥇 {quiz_winners[0]['name']}\n\n"
+                    f"📲 Contactează-ne pe Instagram pentru a primi premiul:\n"
+                    f"👉 @fcsb.shop\n\n"
+                    f"Alături de FCSB! 💪🔴🔵"
+                )
+            else:
+                final_text = (
+                    f"🏆 *AVEM CÂȘTIGĂTORII QUIZ-ULUI!* 🔴🔵\n\n"
+                    f"{winners_text}\n\n"
+                    f"📲 Contactați-ne pe Instagram pentru a primi premiul:\n"
+                    f"👉 @fcsb.shop\n\n"
+                    f"Alături de FCSB! 💪🔴🔵"
+                )
+
+            await context.bot.send_message(
+                chat_id, final_text,
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            active_quiz.clear()
+            quiz_winners.clear()
+
+# ── ADMIN: /quiz ───────────────────────────────────────────────────
+async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.delete()
+        return
+    if not context.args:
+        await context.bot.send_message(
+            update.message.from_user.id,
+            "Folosește: /quiz Premiu | Întrebare | Răspuns corect | Număr câștigători\n\n"
+            "Exemplu: /quiz Tricou oficial FCSB | In ce an a fost infiintat FCSB? | 1947 | 2"
+        )
+        await update.message.delete()
+        return
+
+    text = " ".join(context.args)
+    parts = [p.strip() for p in text.split("|")]
+
+    if len(parts) < 3:
+        await context.bot.send_message(
+            update.message.from_user.id,
+            "❌ Format greșit!\nFolosește: /quiz Premiu | Întrebare | Răspuns | Număr câștigători"
+        )
+        await update.message.delete()
+        return
+
+    premiu = parts[0]
+    intrebare = parts[1]
+    raspuns = parts[2]
+    try:
+        nr_castigatori = int(parts[3]) if len(parts) > 3 else 1
+    except:
+        nr_castigatori = 1
+
+    active_quiz["premiu"] = premiu
+    active_quiz["intrebare"] = intrebare
+    active_quiz["raspuns"] = raspuns
+    active_quiz["castigatori"] = nr_castigatori
+    quiz_winners.clear()
+
+    await context.bot.send_message(
+        update.message.from_user.id,
+        f"✅ Quiz setat!\n"
+        f"🏆 Premiu: {premiu}\n"
+        f"❓ Întrebare: {intrebare}\n"
+        f"✅ Răspuns corect: {raspuns}\n"
+        f"👥 Câștigători: {nr_castigatori}"
+    )
+
+    keyboard = [[InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]]
+    await context.bot.send_message(
+        update.message.chat_id,
+        f"🧠 *QUIZ FCSB — CÂȘTIGĂ {premiu.upper()}!* 🔴🔵\n\n"
+        f"👕 Premiu: *{premiu}*\n\n"
+        f"❓ *{intrebare}*\n\n"
+        f"⚡ {'Primul' if nr_castigatori == 1 else f'Primii {nr_castigatori}'} care {'răspunde' if nr_castigatori == 1 else 'răspund'} corect {'câștigă' if nr_castigatori == 1 else 'câștigă'}!\n"
+        f"⏰ Răspunde acum în comentarii!\n\n"
+        f"Alături de FCSB! 💪🔴🔵",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    await update.message.delete()
+
+# ── ADMIN: /stopquiz ───────────────────────────────────────────────
+async def stopquiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.delete()
+        return
+    active_quiz.clear()
+    quiz_winners.clear()
+    await context.bot.send_message(update.message.from_user.id, "✅ Quiz oprit!")
+    await update.message.delete()
 
 # ── ADMIN: /welcome ────────────────────────────────────────────────
 async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -684,6 +828,8 @@ def main():
     app.add_handler(CommandHandler("shop", shop))
     app.add_handler(CommandHandler("social", social))
     app.add_handler(CommandHandler("concurs", concurs))
+    app.add_handler(CommandHandler("quiz", quiz))
+    app.add_handler(CommandHandler("stopquiz", stopquiz))
     app.add_handler(CommandHandler("welcome", welcome))
     app.add_handler(CommandHandler("anunt", anunt))
     app.add_handler(CommandHandler("concursnou", concursnou))
