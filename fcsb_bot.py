@@ -672,6 +672,38 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = await query.message.reply_text(text, parse_mode="Markdown")
         asyncio.create_task(delete_after(msg, 30))
 
+# ── ADMIN: /welcome — mesaj fix cu butoane pentru pin ─────────────
+async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.delete()
+        return
+    keyboard = [
+        [
+            InlineKeyboardButton("📋 Regulile grupului", callback_data="reguli"),
+            InlineKeyboardButton("🏆 Clasament", callback_data="top")
+        ],
+        [
+            InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro"),
+            InlineKeyboardButton("📲 Canal WhatsApp", url="https://whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46")
+        ]
+    ]
+    await context.bot.send_message(
+        update.message.chat_id,
+        "👋 Bun venit în *Comunitatea FCSB!* 🔴🔵\n\n"
+        "Ești acum parte din cea mai tare comunitate de fani FCSB din România! 🏆\n\n"
+        "📌 *Înainte să scrii, citește regulile!*\n\n"
+        "Aici câștigi:\n"
+        "🎟️ Bilete la meciuri prin concursuri exclusive\n"
+        "🏆 Premii și produse oficiale FCSB\n"
+        "⭐ Urcă în clasament fiind activ\n\n"
+        "Folosește butoanele de mai jos pentru tot ce ai nevoie! 👇\n\n"
+        "Alături de FCSB! 💪🔴🔵",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    await update.message.delete()
+
 # ── Main ───────────────────────────────────────────────────────────
 def main():
     app = Application.builder().token(TOKEN).build()
@@ -694,6 +726,7 @@ def main():
     app.add_handler(CommandHandler("adaugacuvant", adaugacuvant))
     app.add_handler(CommandHandler("stergecuvant", stergecuvant))
     app.add_handler(CommandHandler("listacuvinte", listacuvinte))
+    app.add_handler(CommandHandler("welcome", welcome))
     app.add_handler(CallbackQueryHandler(button_callback))
     logger.info("FCSB Admin Bot pornit!")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
