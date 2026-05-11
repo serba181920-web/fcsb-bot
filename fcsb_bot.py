@@ -1045,6 +1045,45 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         asyncio.create_task(delete_after(msg, 30))
 
 
+
+# ── ADMIN: /ghicestescorul ─────────────────────────────────────────
+async def ghicestescorul(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.delete()
+        return
+    keyboard = [[InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]]
+    await context.bot.send_message(
+        update.message.chat_id,
+        "⚽ *GHICEȘTE SCORUL DE AZI!* 🔴🔵\n\n"
+        "Care crezi că va fi scorul la meciul de astăzi?\n\n"
+        "Scrie predicția ta mai jos! 👇\n\n"
+        "Până atunci, echipează-te de meci! 💪\n\n"
+        "Alături de FCSB! 🔴🔵",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    await update.message.delete()
+
+# ── ADMIN: /ghicesteprimul11 ───────────────────────────────────────
+async def ghicesteprimul11(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.delete()
+        return
+    keyboard = [[InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]]
+    await context.bot.send_message(
+        update.message.chat_id,
+        "🧠 *GHICEȘTE PRIMUL 11 DE AZI!* 🔴🔵\n\n"
+        "Care crezi că va fi formația de start la meciul de astăzi?\n\n"
+        "Scrie echipa ta mai jos! 👇\n\n"
+        "Până atunci, echipează-te de meci! 💪\n\n"
+        "Alături de FCSB! 🔴🔵",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    await update.message.delete()
+
 # ── ADMIN: /trivia ─────────────────────────────────────────────────
 async def trivia(update: Update, context: ContextTypes.DEFAULT_TYPE):
     member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
@@ -1113,6 +1152,8 @@ def main():
     app.add_handler(CommandHandler("stergecuvant", stergecuvant))
     app.add_handler(CommandHandler("listacuvinte", listacuvinte))
     app.add_handler(CommandHandler("trivia", trivia))
+    app.add_handler(CommandHandler("ghicestescorul", ghicestescorul))
+    app.add_handler(CommandHandler("ghicesteprimul11", ghicesteprimul11))
     app.add_handler(CallbackQueryHandler(button_callback))
 
     logger.info("FCSB Admin Bot pornit!")
