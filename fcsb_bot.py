@@ -199,13 +199,13 @@ async def send_feedback():
     try:
         await bot_app.bot.send_message(
             reminder_chat_id,
-            "💬 *VOCEA COMUNITĂȚII* 🔴🔵\n\n"
+            "💬 *VOCEA VOASTRĂ CONTEAZĂ!* 🔴🔵\n\n"
             "Vrem să știm ce vreți să vedeți mai mult!\n\n"
             "Spuneți-ne:\n"
             "👕 Ce produse vreți în shop\n"
             "📱 Ce conținut vreți pe social media\n"
             "🎥 Ce jucători vreți să apară mai mult\n\n"
-            "Vocea voastră contează! 👇\n\n"
+            "Așteptăm răspunsurile voastre! 👇\n\n"
             "Alături de FCSB! 💪🔴🔵",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
@@ -915,13 +915,13 @@ async def testfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     await context.bot.send_message(
         update.message.chat_id,
-        "💬 *VOCEA COMUNITĂȚII* 🔴🔵\n\n"
+        "💬 *VOCEA VOASTRĂ CONTEAZĂ!* 🔴🔵\n\n"
         "Vrem să știm ce vreți să vedeți mai mult!\n\n"
         "Spuneți-ne:\n"
         "👕 Ce produse vreți în shop\n"
         "📱 Ce conținut vreți pe social media\n"
         "🎥 Ce jucători vreți să apară mai mult\n\n"
-        "Vocea voastră contează! 👇\n\n"
+        "Așteptăm răspunsurile voastre! 👇\n\n"
         "Alături de FCSB! 💪🔴🔵",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
