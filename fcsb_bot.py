@@ -84,7 +84,7 @@ async def new_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ]
         msg = await update.message.reply_text(
-            f"👋 Bun venit în *Comunitatea FCSB*, {name}! 🔴🔵\n\n"
+            f"👋 Bun venit în *Grupul Oficial FCSB SHOP*, {name}! 🔴🔵\n\n"
             f"Ești acum parte din cea mai tare comunitate de fani FCSB din România! 🏆\n\n"
             f"Aici găsești:\n"
             f"🎟️ Concursuri cu bilete la meciuri\n"
