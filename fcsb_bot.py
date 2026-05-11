@@ -45,7 +45,7 @@ RIVAL_POSITIVE = [
 ]
 
 FCSB_LINKS = [
-    "shop.fcsb.ro", "fcsb.ro", "t.me/comunitateaFCSB",
+    "shop.fcsb.ro", "fcsb.ro", "t.me/grupaFCSB",
     "whatsapp.com/channel/0029Vb8AmMBAO7RAEYE2af46",
     "instagram.com/fcsb.shop", "tiktok.com/@fcsb.shop",
     "facebook.com/p/FCSB-Shop"
@@ -205,7 +205,7 @@ async def send_feedback():
             "👕 Ce produse vreți în shop\n"
             "📱 Ce conținut vreți pe social media\n"
             "🎥 Ce jucători vreți să apară mai mult\n\n"
-            "Părerea voastră contează! 👇\n\n"
+            "Vocea voastră contează! 👇\n\n"
             "Alături de FCSB! 💪🔴🔵",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
@@ -242,7 +242,7 @@ async def new_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         msg = await update.message.reply_text(
             f"👋 Bun venit în *Grupul Oficial FCSB SHOP*, {name}! 🔴🔵\n\n"
-            f"Ești acum parte din cea mai tare comunitate de fani FCSB din România! 🏆\n\n"
+            f"Ești acum parte din cel mai tare grup de fani FCSB din România! 🏆\n\n"
             f"Aici găsești:\n"
             f"🎟️ Concursuri cu bilete la meciuri\n"
             f"🏆 Premii și produse oficiale FCSB\n"
@@ -482,7 +482,7 @@ async def shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🧣 Esarfe și accesorii\n"
         "👶 Colecție copii și bebeluși\n"
         "🎁 Cadouri pentru fanii FCSB\n\n"
-        "Membrii comunității primesc oferte exclusive! 🔥\n\n"
+        "Membrii grupului primesc oferte exclusive! 🔥\n\n"
         "Alături de FCSB! 💪🔴🔵",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
@@ -558,13 +558,18 @@ async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         update.message.chat_id,
         "👋 Bun venit în *Grupul Oficial FCSB SHOP!* 🔴🔵\n\n"
-        "Ești acum parte din cea mai tare comunitate de fani FCSB din România! 🏆\n\n"
-        "📌 *Înainte să scrii, citește regulile!*\n\n"
-        "Aici câștigi:\n"
-        "🎟️ Bilete la meciuri prin concursuri exclusive\n"
-        "🏆 Premii și produse oficiale FCSB\n\n"
+        "Ești acum parte din cel mai tare grup de fani FCSB din România! 🏆\n\n"
+        "📌 *Înainte să scrii, citește regulile grupului!*\n\n"
+        "Aici te așteaptă:\n"
+        "🎟️ Concursuri cu bilete la meciuri\n"
+        "🏆 Premii și produse oficiale FCSB\n"
+        "🧠 Quiz-uri pentru fanii adevărați\n"
+        "🎥 Conținut exclusiv de la jucători\n"
+        "🛒 Oferte speciale doar pentru membrii grupului\n"
+        "🔥 Discuții live la fiecare meci\n\n"
+        "Fii activ, participă și fii primul care câștigă! 💪\n\n"
         "Urmărește-ne pe toate platformele 👇\n\n"
-        "Alături de FCSB! 💪🔴🔵",
+        "Alături de FCSB! 🔴🔵",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -778,7 +783,7 @@ async def oferta(update: Update, context: ContextTypes.DEFAULT_TYPE):
         update.message.chat_id,
         f"🛒 *OFERTĂ EXCLUSIVĂ FCSB SHOP!* 🔴🔵\n\n"
         f"*{produs}*\n\n"
-        f"Disponibilă DOAR pentru membrii comunității! 🔥\n\n"
+        f"Disponibilă DOAR pentru membrii grupului! 🔥\n\n"
         f"⏰ Valabilă până pe {termen}\n\n"
         f"Nu rata — stocul e limitat! 💪\n\n"
         f"Alături de FCSB! 🔴🔵",
@@ -916,7 +921,7 @@ async def testfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "👕 Ce produse vreți în shop\n"
         "📱 Ce conținut vreți pe social media\n"
         "🎥 Ce jucători vreți să apară mai mult\n\n"
-        "Părerea voastră contează! 👇\n\n"
+        "Vocea voastră contează! 👇\n\n"
         "Alături de FCSB! 💪🔴🔵",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
@@ -1039,6 +1044,33 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = await query.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
         asyncio.create_task(delete_after(msg, 30))
 
+
+# ── ADMIN: /trivia ─────────────────────────────────────────────────
+async def trivia(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.delete()
+        return
+    if not context.args:
+        await context.bot.send_message(
+            update.message.from_user.id,
+            "Folosește: /trivia Întrebarea ta despre FCSB"
+        )
+        await update.message.delete()
+        return
+    intrebare = " ".join(context.args)
+    keyboard = [[InlineKeyboardButton("🛒 Shop oficial", url="https://shop.fcsb.ro")]]
+    await context.bot.send_message(
+        update.message.chat_id,
+        f"🧠 *TRIVIA FCSB!* 🔴🔵\n\n"
+        f"❓ *{intrebare}*\n\n"
+        f"Scrie răspunsul mai jos și hai să vedem cine știe cel mai bine istoria roș-albastră! 👇\n\n"
+        f"Alături de FCSB! 💪🔴🔵",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    await update.message.delete()
+
 # ── Main ───────────────────────────────────────────────────────────
 def main():
     global bot_app
@@ -1080,6 +1112,7 @@ def main():
     app.add_handler(CommandHandler("adaugacuvant", adaugacuvant))
     app.add_handler(CommandHandler("stergecuvant", stergecuvant))
     app.add_handler(CommandHandler("listacuvinte", listacuvinte))
+    app.add_handler(CommandHandler("trivia", trivia))
     app.add_handler(CallbackQueryHandler(button_callback))
 
     logger.info("FCSB Admin Bot pornit!")
