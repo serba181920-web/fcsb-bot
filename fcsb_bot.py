@@ -703,6 +703,65 @@ async def meci(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.delete()
 
+
+# ── Meci deplasare data ────────────────────────────────────────────
+scheduled_deplasare = {}
+
+# ── ADMIN: /setmecideplasare ───────────────────────────────────────
+async def setmecideplasare(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.delete()
+        return
+    if len(context.args) < 3:
+        await context.bot.send_message(
+            update.message.from_user.id,
+            "Folosește: /setmecideplasare 18.05.2026 20:30 FC Hermannstadt | Mesajul tău"
+        )
+        await update.message.delete()
+        return
+    text = " ".join(context.args)
+    parts = text.split("|")
+    info = parts[0].strip().split()
+    scheduled_deplasare["data"] = info[0]
+    scheduled_deplasare["ora"] = info[1]
+    scheduled_deplasare["adversar"] = " ".join(info[2:])
+    scheduled_deplasare["mesaj"] = parts[1].strip() if len(parts) > 1 else "Suntem alături de ei indiferent de rezultat!"
+    await context.bot.send_message(
+        update.message.from_user.id,
+        f"✅ Meci deplasare setat!\n"
+        f"📅 {scheduled_deplasare['data']} ora {scheduled_deplasare['ora']}\n"
+        f"⚽ {scheduled_deplasare['adversar']} vs FCSB\n"
+        f"💬 {scheduled_deplasare['mesaj']}\n\n"
+        f"Trimite /mecideplasare când ești gata! 🔴🔵"
+    )
+    await update.message.delete()
+
+# ── ADMIN: /mecideplasare ──────────────────────────────────────────
+async def mecideplasare(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        await update.message.delete()
+        return
+    ora = scheduled_deplasare.get("ora", "21:00")
+    adversar = scheduled_deplasare.get("adversar", "adversarul")
+    mesaj = scheduled_deplasare.get("mesaj", "Suntem alături de ei indiferent de rezultat!")
+    keyboard = [[InlineKeyboardButton("🛒 Îmbracă-te roș-albastru!", url="https://shop.fcsb.ro")]]
+    await context.bot.send_message(
+        update.message.chat_id,
+        f"🔴🔵 *AZI E ZIUA NOASTRĂ!* 🔴🔵\n\n"
+        f"⚽ *{adversar} vs FCSB*\n"
+        f"⏰ Ora {ora}\n\n"
+        f"{mesaj} 💪\n\n"
+        f"Vocea noastră ajunge pe teren! 🔥\n\n"
+        f"👕 Îmbracă-te roș-albastru:\n"
+        f"🛒 shop.fcsb.ro\n\n"
+        f"Alături de FCSB! 🔴🔵",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    await update.message.delete()
+
 # ── ADMIN: /rezultat ───────────────────────────────────────────────
 async def rezultat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     member = await context.bot.get_chat_member(update.message.chat_id, update.message.from_user.id)
@@ -1138,6 +1197,8 @@ def main():
     app.add_handler(CommandHandler("castigator", castigator))
     app.add_handler(CommandHandler("setmeci", setmeci))
     app.add_handler(CommandHandler("meci", meci))
+    app.add_handler(CommandHandler("setmecideplasare", setmecideplasare))
+    app.add_handler(CommandHandler("mecideplasare", mecideplasare))
     app.add_handler(CommandHandler("rezultat", rezultat))
     app.add_handler(CommandHandler("fanweek", fanweek))
     app.add_handler(CommandHandler("oferta", oferta))
